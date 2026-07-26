@@ -1,150 +1,104 @@
 ---
-name: docker-compose-yaml-field-order
+name: docker-compose-yaml-all-in-current-directory
 description: >
-  docker compose YAML 文件字段排序默认约定。只要用户没有对字段顺序提出要求，凡是写、改、审 docker-compose*.yaml / 
-  compose*.yaml / docker-compose*.yml / compose*.yml 的字段，都必须套用本 skill。权威定义来自
-  <https://github.com/foxydock/foxydock/blob/c875b600ce8ccac60a896103e158e55e80e0e9bd/compose/tool/find_unordered.py>。
+  创建一个仅使用当前工作目录的 docker compose YAML配置文件约定
 when_to_use: >
-  当用户在写、修改、审查自定义 docker compose 文件且没有对字段顺序提出要求时，使用本 skill
+  当用户说类似 "参考一个已有的 docker compose 配置文件重写成一个仅使用当前工作目录的 docker compose YAML配置文件" 时使用本 skill
 license: MIT
 metadata:
   author: xfl12345
   version: "1.0.0"
 ---
 
-# Docker Compose 字段排序约定
+# Docker Compose Yaml 单目录流派的约定
 
 ## When to Use
 
-- 当用户在写、修改、审查自定义 docker compose 文件且没有对字段顺序提出要求时，使用本 skill
+- 当用户说类似 "参考一个已有的 docker compose 配置文件重写成一个仅使用当前工作目录的 docker compose YAML配置文件" 时使用本 skill
 
-## service 块字段顺序约定
+## YAML 字段排序
 
-每个服务块的字段按以下链条的相对顺序排列。不需要的字段可以跳过，但出现的字段不能打乱顺序。`restart` 永远是最后一个字段。
+字段排序是独立 skill `docker-compose-yaml-field-order`（强制触发，写/改/审 compose 服务块时自动套用）。
 
-### 按职责分组（便于记忆）
+## 目录结构约定
 
-**① 环境与继承** — `env_file` → `extends`  
-**② 元数据 / 运行身份** — `labels` → `user` → `pid` → `ipc`  
-**③ 权限与安全** — `privileged` → `cap_add` → `sysctls` → `security_opt`  
-**④ IO 与共享内存** — `stdin_open` → `tty` → `shm_size`  
-**⑤ 镜像与构建** — `image` → `container_name` → `pull_policy` → `build`  
-**⑥ 设备与临时存储** — `devices` → `tmpfs`  
-**⑦ 持久化挂载** — `volumes`  
-**⑧ 运行时入口** — `entrypoint` → `command` → `healthcheck` → `logging`  
-**⑨ 网络身份** — `hostname` → `extra_hosts` → `links`  
-**⑩ 网络接入** — `networks` → `network_mode` → `ports`  
-**⑪ 依赖与生命周期** — `depends_on` → `stop_grace_period` → `restart`
+项目内文件统一走镜像目录结构，分 `./volume/`（持久化）、`./env/`（环境变量）、`./build_resource/`（构建）三类。前两类下一级都允许有一个可选的 **namespace**（一个 compose 区分多个变体或公共资源时用，如 `ubuntu/kde`、`common`），再接 `moved_root` 或直接放文件。
 
-**为什么要按职责分组。** 从「配置注入 → 身份 → 权限 → 资源 → 镜像 → 存储 → 运行时 → 网络 → 生命周期」是一条从「容器是什么」到「容器怎么跑、怎么死」的自然阅读链。统一顺序让 diff 最小、review 时一眼能看出新字段插得对不对。
+**volume**：
 
-**字段先后关系的判定优先级。** 决定先后时，「变量基于」关系优先级最高：一个字段的值或产物若由另一个字段决定，被依赖的排前、派生的排后，覆盖分组、作用域、粒度等其它理由。例：`build` 产出的镜像名默认取自 `image`，所以 `image` 在 `build` 前；同理 `ports` 基于 `expose`、`environment` 覆盖 `env_file`、`deploy` 部署的镜像来自 `image`/`build`。
+```
+./volume/[<namespace>/]moved_root/<容器内路径>  →  /<容器内路径>
+```
 
-### 不在权威清单里的字段
+`moved_root` 镜像容器根文件系统——容器内要持久化什么路径，就在 `moved_root/` 下建相同相对路径。例：`/data` → `./volume/moved_root/data`；多变体时 `/config` → `./volume/ubuntu/kde/moved_root/config`。
 
-以下字段都不在 find_unordered.py 的 `the_service_key_order` 里，按概念分组就近插入（位置见下表）：
+**env**：
 
-| 扩展字段      | 归属分组         | 插入位置                         | 由头                                   |
-| ------------- | ---------------- | -------------------------------- | -------------------------------------- |
-| `profiles`    | ① 环境与继承     | 顶部                             | 最高层开关，决定服务是否启用           |
-| `environment` | ① 环境与继承     | `profiles` 之后，`env_file` 之前 | `environment`优先级比`env_file`高      |
-| `group_add`   | ③ 权限与安全     | `security_opt` 之后              | `security_opt`比`group_add`更底层      |
-| `deploy`      | ⑤ 镜像与构建     | `build` 之后                     | `deploy`部署的镜像来自 `image`/`build` |
-| `expose`      | ⑩ 网络接入       | `ports` 之前                     | 一般都是基于`expose`定制的`ports`      |
-| `init`        | ⑪ 依赖与生命周期 | `restart` 之前                   | `init` 管进程，`restart` 管容器        |
-| `post_start`  | ⑪ 依赖与生命周期 | `init` 之后                      | 启动后触发的钩子，紧跟 `init`(PID 1)   |
+```
+./env/[<namespace>/]<name>.env
+```
 
-### 完整链条（全字段，自上而下）
+环境变量外置到 `./env/` 下的 `.env` 文件，compose 用 `env_file` 引用。例：`./env/new-api.env`、`./env/common.env`。
 
-把上面分组与表格的插入位置整合后的全字段顺序：
+**build_resource**：
 
-- profiles
-- environment
-- env_file
-- extends
-- labels
-- user
-- pid
-- ipc
-- privileged
-- cap_add
-- sysctls
-- security_opt
-- group_add
-- stdin_open
-- tty
-- shm_size
-- image
-- container_name
-- pull_policy
-- build
-- deploy
-- devices
-- tmpfs
-- volumes
-- entrypoint
-- command
-- healthcheck
-- logging
-- hostname
-- extra_hosts
-- links
-- networks
-- network_mode
-- expose
-- ports
-- depends_on
-- stop_grace_period
-- init
-- post_start
-- restart
+```
+./build_resource/
+├── <variant>.Dockerfile   # 多变体一文件一个，按变体命名（如 ubuntu-kde.Dockerfile / alpine-kde.Dockerfile）
+├── *.*                    # 容器镜像构建辅助工具等，不放入容器镜像里的文件（如 patch-openssh-server.sh）
+└── moved_root/            # 镜像容器根目录，用于构建期注入文件到镜像中（etc/apt/ 源、etc/fonts/、usr/share/…）
+```
+
+- 多变体用 **文件名** 区分（不像 volume/env 用 namespace 子目录）
+- compose 里 `build.context: ./build_resource` + `build.dockerfile: ./<variant>.Dockerfile` 选用。
+- `moved_root/` 与卷里的 `moved_root/` 同义——都镜像容器根目录，区别只是这里在构建期注入文件（如 apt 源 template、字体），成为镜像的一部分，而volume那套在运行期持久化。
+
+### 规则
+
+- 卷宿主机侧路径统一走 `./volume/[<namespace>/]moved_root/`，禁止直接挂 `./volume/` 或随意路径。
+- env 变量外置到 `./env/[<namespace>/]` 下的 `.env` 文件，禁止把敏感信息内联进 `environment`。
+- namespace 可选：单一服务直接 `./volume/moved_root/...`；一个 compose 含多变体或公共资源时用它分组（参考 [webtop 示例](https://github.com/xfl12345/webtop/blob/0cd2bb65361e2985fb13c989001bcc94a27fe8a1/docker-compose.example.yaml) 的 `ubuntu/kde`、`common`）。
+- 把官方 compose 改造成自己的风格时：只保留核心服务，删掉注释掉的可选 sidecar，卷改走 `moved_root`、env 改走 `./env/`，字段按链条重排。
 
 ### 示例
 
-以 archivebox 官方 compose 为例（<https://github.com/ArchiveBox/ArchiveBox/blob/c8d0e2e8e70b27c6d3db059f8fe765cb17aab418/docker-compose.yml>）：
+以 new-api 官方 compose 为例（<https://github.com/QuantumNous/new-api/blob/3e1e728279884d83358811aec00980dd55f6ad4e/docker-compose.yml>），把内联 `environment`（含 `SQL_DSN`、`REDIS_CONN_STRING` 等带密码的变量）外置成 `env_file`：
 
 ```yaml
-# ❌ 官方原版：字段乱序——①environment、④shm_size 错位
+# ❌ 官方原版：env 全内联在 compose（密码明文写进来），卷也挂随意路径
 services:
-  archivebox:
-    image: ${ARCHIVEBOX_IMAGE:-archivebox/archivebox:dev} # ⑤
-    ports: # ⑩
-      - 8000:8000
-    volumes: # ⑦
+  new-api:
+    image: calciumion/new-api:latest
+    volumes:
       - ./data:/data
-    environment: # ① ← 跑到 ⑤⑦⑩ 后
-      - BASE_URL=...
-    shm_size: 1gb # ④ ← 跑到 ⑤ 后
-```
-
-```yaml
-# ✅ 按约定重排：「变量基于」优先（environment 先、shm_size 在 image 前），分组自上而下
-services:
-  archivebox:
-    environment: # ①
-      - BASE_URL=${BASE_URL:-http://archivebox.localhost:8000}
-    shm_size: 1gb # ④
-    image: ${ARCHIVEBOX_IMAGE:-archivebox/archivebox:dev} # ⑤
-    container_name: archivebox # ⑤
-    volumes: # ⑦
-      - archivebox_storage:/data
-    ports: # ⑩
-      - 8000:8000
-    restart: unless-stopped # ⑪
-
-volumes:
-  archivebox_storage:
-```
-
-**override 文件** — 只写需要覆写的字段，相对顺序仍遵守链条：
-
-```yaml
-services:
-  dind:
+      - ./logs:/app/logs
     environment:
-    build:
+      - SQL_DSN=postgresql://root:123456@postgres:5432/new-api # ← 密码明文
+      - REDIS_CONN_STRING=redis://:123456@redis:6379
+      - TZ=Asia/Shanghai
+      - NODE_NAME=new-api-node-1
+```
+
+```yaml
+# ✅ 按约定：env 走 env_file（外置到 ./env/ 下的文件），卷走 moved_root
+services:
+  new-api:
+    env_file:
+      - ./env/new-api.env
+    image: calciumion/new-api:latest
+    volumes:
+      - ./volume/moved_root/data:/data
+      - ./volume/moved_root/app/logs:/app/logs
+```
+
+```env
+# ./env/new-api.env —— 变量集中放文件，compose 只引用路径
+SQL_DSN=postgresql://root:123456@postgres:5432/new-api
+REDIS_CONN_STRING=redis://:123456@redis:6379
+TZ=Asia/Shanghai
+NODE_NAME=new-api-node-1
 ```
 
 ## 不适用的情况
 
-直接复制上游官方 compose 文件零改动的项目不强制遵守本约定。一旦对 compose 文件做了个人定制，就应当遵守本约定。
+直接复制上游官方 compose 文件零改动的项目不强制遵守本约定。一旦对 compose 做了个人定制，就应当回到本约定。
