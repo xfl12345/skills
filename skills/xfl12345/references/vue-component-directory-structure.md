@@ -57,8 +57,8 @@ export interface SharedState {        // 不是转发，是新定义
 
 ### 规范
 
-- 接口名统一叫 `Props`，有 emit 加 `Emits`，有默认 `v-model` 加 `ModelValue`，有 slot 加 `Slots`（含各 slot 的 scoped props 类型），都不加组件名前缀。
-- 具名 `v-model:xxx` 加绑定名首字母大写的类型名（如 `Count`）。
+- 接口名统一叫 `Props`，有 emit 加 `Emits`，有默认 `v-model` 加 `ModelValue`，有 slot 加 `Slots`（含各 slot 的 scoped props 类型），都不加组件名前缀
+- 具名 `v-model:xxx` 加绑定名首字母大写的类型名（如 `Count`）
 
 ```typescript
 // types.ts
@@ -173,8 +173,8 @@ export type * as CircleProgressBarTypes from './types'
 
 ## 组件内引用常量与类型
 
-- `defineProps` / `defineEmits` / `defineModel` / `defineSlots` 必须引用同目录的 `types.ts`，保证唯一真相源。
-- 运行时常量 / 枚举值引用同目录的 `TheConst.ts`。
+- `defineProps` / `defineEmits` / `defineModel` / `defineSlots` 必须引用同目录的 `types.ts`，保证唯一真相源
+- 运行时常量 / 枚举值引用同目录的 `TheConst.ts`
 
 ```vue
 <script setup lang="ts">

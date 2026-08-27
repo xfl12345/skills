@@ -8,8 +8,8 @@ description: >
 
 ## 双向绑定与事件
 
-- 父子组件数据双向绑定用 `v-model` + `defineModel`。
-- 简单事件驱动的数据，用可写计算属性代劳。
+- 父子组件数据双向绑定用 `v-model` + `defineModel`
+- 简单事件驱动的数据，用可写计算属性代劳
 
 ❌ BAD: 手工绑 :model-value + @update:model-value + 处理函数，不仅啰嗦，还因为需要维护 4 处符号的对接，心智负担重，可读性差
 

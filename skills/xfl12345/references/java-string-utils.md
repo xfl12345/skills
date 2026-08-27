@@ -24,5 +24,5 @@ description: 【仅当项目已依赖 commons-lang3（能 import org.apache.comm
 
 ## 不改
 
-- 集合（List/Set/Map）的 `.isEmpty()`（那是集合判空，不是字符串）。
-- 确定非 null 的单目 `.isEmpty()`（如 `substring` 的结果）。
+- 集合（List/Set/Map）的 `.isEmpty()`（那是集合判空，不是字符串）
+- 确定非 null 的单目 `.isEmpty()`（如 `substring` 的结果）

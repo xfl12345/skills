@@ -9,9 +9,9 @@ description: Java 编码规范。编写任何 Java 源码时都应触发。
 
 ### 通用约定
 
-- 除非有 className 冲突，业务代码和 Javadoc 都禁止使用全限定名，一律 `import`。
-- 如果项目使用了 lombok 则所有 java record 带 lombok `@Builder`。
-- record 组件的说明放 record 的 javadoc 里用 `@param 组件名 说明`，不要在组件行写 `/** */`（IDE 报「dangling javadoc」）或 `//` 注释。
+- 除非有 className 冲突，业务代码和 Javadoc 都禁止使用全限定名，一律 `import`
+- 如果项目使用了 lombok 则所有 java record 带 lombok `@Builder`
+- record 组件的说明放 record 的 javadoc 里用 `@param 组件名 说明`，不要在组件行写 `/** */`（IDE 报「dangling javadoc」）或 `//` 注释
 
 ### References
 

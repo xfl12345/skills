@@ -86,7 +86,7 @@ description: TypeScript 编码规范。编写任何 TypeScript 源码时都应�
   }
   ```
 
-- 除非万不得已，严禁 `any`。除不信任数据的入口边界外，尽量避免 `unknown`，优先提供确切的类型。`unknown` 仅用于不信任数据的边界，接住即收窄，勿偷懒当作万能类型。
+- 除非万不得已，严禁 `any`。除不信任数据的入口边界外，尽量避免 `unknown`，优先提供确切的类型。`unknown` 仅用于不信任数据的边界，接住即收窄，勿偷懒当作万能类型
 - 善用 `enum` 做枚举（限 string 枚举：数字枚举存在反向映射，`Object.values()` 会混入镜像数字成员），并从中取常量数组（`Object.values()` / `Object.keys()`）：
 
   ```typescript
@@ -100,8 +100,8 @@ description: TypeScript 编码规范。编写任何 TypeScript 源码时都应�
   export const NGINX_NJS_DIRECTIVE_SET: ReadonlySet<NginxNjsDirective> = new Set(NGINX_NJS_DIRECTIVES)
   ```
 
-- 别把 enum 重构成 `as const` 对象 + `keyof typeof` 字符串联合——那不是优化，是降级：联合类型只是裸字符串并集，任何匹配的字面值都能直接塞进来，与枚举对象的强绑定随之消失（函数参数一旦收窄成字符串联合，调用点就开始散落魔法字符串，枚举对象被架空）；string enum 是封闭类型，裸字符串赋不进去，成员引用与重命名重构始终锚定在枚举上。
-- 「避免 enum」的官方忠告只针对库作者：对外发布的 `.ts` 源码可能被消费方开启 `erasableSyntaxOnly`（纯 Node 原生跑 TS 必配）直接运行，enum 这类不可擦除语法才会报错。项目内部使用有编译/打包转换兜底，不受此影响。仅当源码原样对外发布、或项目本身强制 `erasableSyntaxOnly` 时，才降级为 `as const` 对象 + `type X = typeof M[keyof typeof M]` 等价实现。
+- 别把 enum 重构成 `as const` 对象 + `keyof typeof` 字符串联合——那不是优化，是降级：联合类型只是裸字符串并集，任何匹配的字面值都能直接塞进来，与枚举对象的强绑定随之消失（函数参数一旦收窄成字符串联合，调用点就开始散落魔法字符串，枚举对象被架空）；string enum 是封闭类型，裸字符串赋不进去，成员引用与重命名重构始终锚定在枚举上
+- 「避免 enum」的官方忠告只针对库作者：对外发布的 `.ts` 源码可能被消费方开启 `erasableSyntaxOnly`（纯 Node 原生跑 TS 必配）直接运行，enum 这类不可擦除语法才会报错。项目内部使用有编译/打包转换兜底，不受此影响。仅当源码原样对外发布、或项目本身强制 `erasableSyntaxOnly` 时，才降级为 `as const` 对象 + `type X = typeof M[keyof typeof M]` 等价实现
 
 - 尽量复用已有类型——优先使用第三方库导出/推导的类型（如 `z.infer`、vue-router 的 `RouteNamedMap`、索引取型的 `CSSProperties['width']` / `HTMLAudioElement['textTracks']`），再善用 `Omit` / `Pick` / `Exclude` / `Extract` / `Parameters` / `ReturnType` / `InstanceType` / `Required` / `Partial` / `Readonly` / `Record` 等工具类型对其加工，勿手写复刻：
 
@@ -219,5 +219,5 @@ description: TypeScript 编码规范。编写任何 TypeScript 源码时都应�
 
 模块导入规范见 [typescript-esm.md](./typescript-esm.md)，按下述条件触发：
 
-- **适用场景**：打包器项目（Vite / webpack 等——模块说明符由打包器解析）中写、改、审任何 `import` 语句。后缀省略、index 目录别名、引用具体度、相对/绝对层级阈值、barrel、内联 type 拆分等全部以该文件为准。
-- **不适用场景**：纯 Node 原生环境（node 解释器直接执行 `.ts`：type stripping / nodenext）——该文件的规范与之相反，勿套用。
+- **适用场景**：打包器项目（Vite / webpack 等——模块说明符由打包器解析）中写、改、审任何 `import` 语句。后缀省略、index 目录别名、引用具体度、相对/绝对层级阈值、barrel、内联 type 拆分等全部以该文件为准
+- **不适用场景**：纯 Node 原生环境（node 解释器直接执行 `.ts`：type stripping / nodenext）——该文件的规范与之相反，勿套用

@@ -25,8 +25,8 @@ description: 写、改、审 Java（.java）的判空、取默认值、属性/Ma
 
 ## 例外（保留三元 / if，不为工具而工具，可读性永远第一）
 
-- 业务分支选择（如「有 groupPath → 组授权，无 → 用户授权」），三元表达的是逻辑分叉而非判空取值，保留。
-- `Optional` 链超过 2 层会牺牲可读性，改回局部变量 + 提前 return。
-- 嵌套三级回退（`a!=null?a:(b!=null?b:c)`）：`requireNonNullElseGet` + lambda 嵌套 `requireNonNullElse` 两层下来可读性未必更好，优先 `if` + 局部变量逐层赋值。
-- 框架适配 / 反射工具层（如 `ClassPathResourceUtils`）可豁免，避免对底层工具做风格改造引入风险。
-- Stream / Optional 链路内部的局部判断、record 构造里连续同源字段访问，按可读性取舍。
+- 业务分支选择（如「有 groupPath → 组授权，无 → 用户授权」），三元表达的是逻辑分叉而非判空取值，保留
+- `Optional` 链超过 2 层会牺牲可读性，改回局部变量 + 提前 return
+- 嵌套三级回退（`a!=null?a:(b!=null?b:c)`）：`requireNonNullElseGet` + lambda 嵌套 `requireNonNullElse` 两层下来可读性未必更好，优先 `if` + 局部变量逐层赋值
+- 框架适配 / 反射工具层（如 `ClassPathResourceUtils`）可豁免，避免对底层工具做风格改造引入风险
+- Stream / Optional 链路内部的局部判断、record 构造里连续同源字段访问，按可读性取舍
