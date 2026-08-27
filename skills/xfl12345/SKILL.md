@@ -22,6 +22,7 @@ metadata:
 - 旧注释有参考价值就保留，不要养成改代码就删注释的坏习惯。
 - 代码可读性永远放在第一位（减少 BUG、性能优先的同时，也要保证人类可读性）。
 - 尽量不要让高度相似的代码重复三遍，该抽象的抽象，该通用的通用。
+- **闭包纯净**：lambda / 箭头函数内被捕获的外部变量只读不改写——要产出走返回值（生产归生产），要修改放回显式循环或具名方法让副作用可见（修改归修改）；纯观察型副作用（如日志）不在此限；确需例外的必须注释缘由。
 
 ### 语法
 
@@ -65,11 +66,13 @@ metadata:
 
 按当前文件的语言进入对应 reference（路径相对本 skill 目录）：
 
-| 语言 | 入口  | 何时读 |
-|---|---|---|
-| Java | [`references/java.md`](./references/java.md) | 写 / 改 / 审任何 `.java` |
-| JavaScript | [`references/javascript.md`](./references/javascript.md) | 写 / 改 / 审任何 `.js`（`.ts` 见下方触发叠加） |
-| TypeScript | [`references/typescript.md`](./references/typescript.md) | 写 / 改 / 审任何 `.ts` / vue `<script lang="ts">` |
-| Vue | [`references/vue.md`](./references/vue.md) | 写 / 改 / 审任何 `.vue` |
+> 写 / 改 / 审任何 Vue 组件时，按内部的 script 标签按其 lang 属性叠加触发加载对应的语言 SKILL  
+> 例如 `<script lang="ts">` / `<script lang="js">` 分别对应 TypeScript 和 JavaScript  
+> tsx/jsx 同理
 
-> 触发叠加：`.ts` 默认同载 `javascript.md`（JS 惯用法）；`.vue` 默认同载 `typescript.md`（`<script lang="ts">` 的类型规）。
+| 语言 | 入口  | 何时读 | 常见文件后缀 |
+|---|---|---|---|
+| Java | [`references/java.md`](./references/java.md) | 写 / 改 / 审任何 Java 源码 | `.java` |
+| JavaScript | [`references/javascript.md`](./references/javascript.md) | 写 / 改 / 审任何 JavaScript/TypeScript 源码 | `.js` / `.jsx` |
+| TypeScript | [`references/typescript.md`](./references/typescript.md) | 写 / 改 / 审任何 TypeScript 源码 | `.ts` / `.tsx` |
+| Vue | [`references/vue.md`](./references/vue.md) | 写 / 改 / 审任何 Vue 组件源码 | `.vue` |

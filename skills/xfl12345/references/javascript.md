@@ -10,6 +10,19 @@ description: JavaScript 编码规范。编写任何 JavaScript 源码时都应�
 - 一律用 `void 0` 代替 `undefined`
 - 禁止扩展内置对象原型（prototype）
 
+### 文件命名
+
+> 文件名后缀视项目具体情况而定。例如 `.js` / `.jsx` / `.cjs` / `.mjs` 等等  
+> 本规范涉及文件命名时，只定义主文件名（Main Filename）  
+
+- 单个 JavaScript 文件只写一个主实体，文件名与主实体同名。
+- class：PascalCase 且与文件同名（如 `BroadcastContext.js` ↔ `class BroadcastContext {}`）。
+- Schema 文件固定名 `schemas`：专门存放 class 定义。
+- 常量集合文件固定名 `TheConst`：一个目录至多一个；集合内常量一律 SCREAMING_SNAKE_CASE
+  - **依赖封闭**：只允许引用第三方库与项目 class，禁止引用任何其它项目文件
+  - 缘由：常量是被广泛导入的基石，历史上经包装再导出曾放大循环引用风险——把依赖面封死，环便无从形成，re-export 无需再设防。
+- 工具函数文件：只含函数，文件名用 camelCase。
+
 ### 优先使用 JS 原生 API
 
 #### 数组优先用 `push` / `unshift` / `concat` / `splice` / `forEach` / `map` / `filter` / `at` 等
