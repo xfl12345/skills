@@ -174,45 +174,10 @@ description: TypeScript 编码规范。编写任何 TypeScript 源码时都应�
   type ChannelEventName = typeof CHANNEL_EVENTS[keyof typeof CHANNEL_EVENTS]
   ```
 - 如遇深层结构、过于复杂的类型时，尽量使用 `type-fest` 完成类型体操
-- 除非表示 `undefined` 类型，只要是作为值用途，一律用 `void 0` 代替 `undefined`：
+- undefined 规范继承自 [javascript.md](./javascript.md)，TS 的唯一例外：作「类型」用时照写 `undefined`——类型位置不存在遮蔽问题：
 
   ```typescript
-  // ❌ BAD: 作「值」用 undefined——可被局部变量遮蔽（`let undefined = 1` 就废了）
-  const badFallback = undefined
-  if (value === undefined) {
-  }
-
-  // ✅ GOOD: void 0 永远是安全的 undefined，不受遮蔽影响
-  const fallback = void 0
-  if (value === void 0) {
-  }
-
-  // ✅ 例外：作「类型」用时照写 undefined
   type Status = 'idle' | 'done' | undefined
-  ```
-
-- 兜底赋值用 `??`，禁用 `||`（`||` 会把 `0` / `''` / `false` 当假值，经典坑 `count || 10` 当 count=0；布尔逻辑短路如 `if (a || b)` 不在约束内）。注意：`??` 与 `&&` / `||` 混用必须显式加括号，否则直接是语法错误：
-
-  ```typescript
-  const count = 0
-  const label = ''
-  const enabled = false
-
-  // ❌ BAD: || 把 0 / '' / false 都当假值，真实值被兜底吞掉
-  const badCount = count || 10       // 10，丢了真实的 0
-  const badLabel = label || 'anon'   // 'anon'，丢了真实的 ''
-  const badFlag = enabled || true    // true，丢了真实的 false
-
-  // ✅ GOOD: ?? 只在 null / undefined 时兜底，0 / '' / false 原样保留
-  const safeCount = count ?? 10      // 0
-  const safeLabel = label ?? 'anon'  // ''
-  const safeFlag = enabled ?? true   // false
-
-  // ❌ BAD: ?? 与 || 混用不写括号——语言级 SyntaxError，编译都过不了
-  // const badMixed = enabled || fallback ?? 'default'
-
-  // ✅ GOOD: 括号写明结合意图
-  const safeMixed = (enabled || fallback) ?? 'default'
   ```
 
 ### 模块导入

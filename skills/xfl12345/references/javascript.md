@@ -7,8 +7,47 @@ description: JavaScript 编码规范。编写任何 JavaScript 源码时都应�
 
 ## Coding Practices
 
-- 一律用 `void 0` 代替 `undefined`
 - 禁止扩展内置对象原型（prototype）
+
+### 空值与兜底
+
+- 作为值用途时，一律用 `void 0` 代替 `undefined`：
+
+  ```javascript
+  // ❌ BAD: 作「值」用 undefined——可被局部变量遮蔽（`let undefined = 1` 就废了）
+  const badFallback = undefined
+  if (value === undefined) {
+  }
+
+  // ✅ GOOD: void 0 永远是安全的 undefined，不受遮蔽影响
+  const fallback = void 0
+  if (value === void 0) {
+  }
+  ```
+
+- 兜底赋值用 `??`，禁用 `||`（`||` 会把 `0` / `''` / `false` 当假值，经典坑 `count || 10` 当 count=0；布尔逻辑短路如 `if (a || b)` 不在约束内）。注意：`??` 与 `&&` / `||` 混用必须显式加括号，否则直接是语法错误：
+
+  ```javascript
+  const count = 0
+  const label = ''
+  const enabled = false
+
+  // ❌ BAD: || 把 0 / '' / false 都当假值，真实值被兜底吞掉
+  const badCount = count || 10       // 10，丢了真实的 0
+  const badLabel = label || 'anon'   // 'anon'，丢了真实的 ''
+  const badFlag = enabled || true    // true，丢了真实的 false
+
+  // ✅ GOOD: ?? 只在 null / undefined 时兜底，0 / '' / false 原样保留
+  const safeCount = count ?? 10      // 0
+  const safeLabel = label ?? 'anon'  // ''
+  const safeFlag = enabled ?? true   // false
+
+  // ❌ BAD: ?? 与 || 混用不写括号——语言级 SyntaxError，编译都过不了
+  // const badMixed = enabled || fallback ?? 'default'
+
+  // ✅ GOOD: 括号写明结合意图
+  const safeMixed = (enabled || fallback) ?? 'default'
+  ```
 
 ### 文件命名
 
@@ -17,7 +56,9 @@ description: JavaScript 编码规范。编写任何 JavaScript 源码时都应�
 
 - 单个 JavaScript 文件只写一个主实体，文件名与主实体同名
 - class：PascalCase 且与文件同名（如 `BroadcastContext.js` ↔ `class BroadcastContext {}`）
-- Schema 文件固定名 `schemas`：专门存放 class 定义
+- class 组织按作用域二选一：
+  - **全局通用**（跨模块复用）→ 多文件：一类一文件、PascalCase 与文件同名（即上条）
+  - **局部定义**（模块 / 目录内部使用的数据契约类）→ 单文件：集中放固定名 `schemas`
 - 常量集合文件固定名 `TheConst`：一个目录至多一个；集合内常量一律 SCREAMING_SNAKE_CASE
   - **依赖封闭**：只允许引用第三方库与项目 class，禁止引用任何其它项目文件
   - 缘由：常量是被广泛导入的基石，历史上经包装再导出曾放大循环引用风险——把依赖面封死，环便无从形成，re-export 无需再设防
