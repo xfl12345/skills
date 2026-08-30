@@ -11,7 +11,7 @@ description: 在编写或重构 Vue 3 组件时使用——用 CSS class prop �
 
 ## 核心规则
 
-### 1. 禁止 `propsCssStyle`
+### 禁止 propsCssStyle
 
 `propsCssStyle?: CSSProperties` 被禁用。替换方式取决于它原来作用于哪个元素：
 
@@ -49,7 +49,7 @@ defineProps<{ borderClass?: string }>()
 </style>
 ```
 
-### 2. Class Prop 命名
+### Class Prop 命名
 
 prop 名称按它绑定的元素命名，而不是按 CSS 属性命名：
 
@@ -64,13 +64,15 @@ buttonBorderClass?: string    // 绑定到边框/阴影元素
 centerPictureClass?: string   // 绑定到中间图片区域
 ```
 
-### 3. 禁止 `:style` 与内联样式
+### 禁止 `:style` 与内联样式
 
-所有 `style="..."`、`:style="..."` 和 `:style="someComputed"` 都必须替换为 `<style module>` 类 + `v-bind()`。静态值直接写死，动态值用 `v-bind()`。
+所有 `style="..."`、`:style="..."` 和 `:style="someComputed"` 都必须替换为 `<style module>` 类 + `v-bind()`。
 
-**注意：** `v-bind()` 的值为 `undefined` 或 `null` 时会产生空的 CSS 自定义属性，浏览器会忽略它——相当于该 CSS 声明被移除。因此 computed 对象不需要给每个字段都赋值，未设置字段保持 `undefined` 即可。
+## CSS class 静态引用规范
 
-**单字段** → 用简单 `v-bind(name)`：
+样式值会变，CSS class 挂定后不切换——业务数据经 computed 派生样式，CSS class 通过 `v-bind()` 直取。
+
+### 1. 单字段 → `v-bind(name)`
 
 ```vue
 <!-- ❌ BAD -->
@@ -96,48 +98,40 @@ const props = defineProps<{ boxSize: number }>()
 </style>
 ```
 
-**多字段** → 保留 computed，用 `v-bind('obj.field')` 逐个字段绑定：
+### 2. 多字段 → 逐字段 `v-bind('obj.field')`
 
 ```vue
-<!-- ❌ BAD -->
 <script setup lang="ts">
-import { computed, reactive, type CSSProperties } from 'vue'
+import { computed, type CSSProperties } from 'vue'
 
-const state = reactive({ strokeColor: 'black', strokeWidth: 2, duration: 0.3 })
+const props = defineProps<{
+  progress: number   // 业务值：进度 0-100
+  speed: number      // 业务值：倍速
+}>()
 const circleStyle = computed<CSSProperties>(() => ({
-  stroke: state.strokeColor,
-  strokeWidth: state.strokeWidth,
-  transitionDuration: state.duration + 's',
+  strokeDasharray: `${props.progress * 2.51} 251`,   // r=40 周长≈251：进度 → 弧长
+  transitionDuration: `${1 / props.speed}s`,         // 倍速 → 过渡时长
 }))
 </script>
+
+<!-- ❌ BAD: :style 直绑动态样式对象——应改走 CSS module + v-bind 逐字段 -->
 <template>
   <circle :style="circleStyle" />
 </template>
 
-<!-- ✅ GOOD -->
-<script setup lang="ts">
-import { computed, reactive, type CSSProperties } from 'vue'
-
-const state = reactive({ strokeColor: 'black', strokeWidth: 2, duration: 0.3 })
-const circleStyle = computed<CSSProperties>(() => ({
-  stroke: state.strokeColor,
-  strokeWidth: state.strokeWidth,
-  transitionDuration: state.duration + 's',
-}))
-</script>
+<!-- ✅ GOOD: 同一份派生样式，出口换成 CSS module + 逐字段 v-bind -->
 <template>
   <circle :class="$style.filling" />
 </template>
 <style module>
 .filling {
-  stroke: v-bind('circleStyle.stroke');
-  stroke-width: v-bind('circleStyle.strokeWidth');
+  stroke-dasharray: v-bind('circleStyle.strokeDasharray');
   transition-duration: v-bind('circleStyle.transitionDuration');
 }
 </style>
 ```
 
-### 4. `calc(v-bind() * 1px)` 与 JS 字符串 computed 的取舍
+### 3. `calc(v-bind() * 1px)` 与 JS 字符串 computed 的取舍
 
 单值单位转换优先用 CSS `calc(v-bind(numericRef) * 1px)`，而不是 JS 字符串拼接 computed。这样能让 JS 里保持数值类型，单位交给 CSS 处理。
 
@@ -214,7 +208,7 @@ const props = defineProps<{ theFontSizeInPixel: number }>()
 const quarterFontSizeInPixel = computed<number>(() => Math.floor(props.theFontSizeInPixel / 4))
 ```
 
-### 5. 多值 CSS 属性
+### 4. 多值 CSS 属性
 
 像 `margin`、`padding`、`box-shadow` 这类简写属性，如果每个值都用 `calc(v-bind * 1px)` 会非常冗长，保留 JS 字符串 computed 以提升可读性：
 
@@ -241,7 +235,7 @@ const boxShadow = computed<string>(() => {
 .card { box-shadow: v-bind(boxShadow); }
 ```
 
-### 6. `v-bind()` 点号写法必须加引号
+### 5. `v-bind()` 点号写法必须加引号
 
 简单标识符不加引号即可。点号写法**必须**使用字符串形式：
 
@@ -256,7 +250,11 @@ stroke: v-bind(circleStyle.stroke);
 stroke: v-bind('circleStyle.stroke');
 ```
 
-### 7. 静态条件样式 → CSS Class 绑定
+## CSS class 动态引用规范
+
+CSS 值不变，变的是哪些 class 生效——条件激活与整套切换。
+
+### 动态激活法
 
 CSS 值是**静态**的、但按条件应用时，用 Vue 的条件 class 绑定即可，不需要 computed 或 v-bind()：
 
@@ -272,7 +270,7 @@ const debugBorderAqua = computed<CSSProperties['border']>(() =>
 )
 </script>
 <template>
-  <div :class="$style.cvBox" :style="{ border: debugBorderAqua }">
+  <div :class="$style.cvBox" :style="{ border: debugBorderAqua }"></div>
 </template>
 <!-- 更差：把静态值塞进 CSS 的 v-bind 里（而非用 class）-->
 <style module>
@@ -286,7 +284,7 @@ import { reactive } from 'vue'
 const settingsStore = reactive({ devMode: false })
 </script>
 <template>
-  <div :class="[$style.cvBox, { [$style.cvBoxDebug]: settingsStore.devMode }]">
+  <div :class="[$style.cvBox, { [$style.cvBoxDebug]: settingsStore.devMode }]"></div>
 </template>
 <style module>
 .cvBoxDebug { border: 1px dashed aqua; }
@@ -295,7 +293,7 @@ const settingsStore = reactive({ devMode: false })
 
 **原因：** CSS 值本身是静态的——运行时不变，只变“是否应用”。这种情况下 CSS class 是正确抽象；v-bind() 用于动态值。
 
-### 8. 布局状态切换 → CSS Class 名
+### 动态列表法
 
 在多个完整布局模式之间切换时（例如居中 vs 左对齐），用 `useCssModule()` + 返回 CSS 模块键名的 computed，而不是返回 CSSProperties 对象的 computed：
 
@@ -314,7 +312,7 @@ const cvBoxParentStyle = computed<CSSProperties>(() => {
 })
 </script>
 <template>
-  <div :class="$style.cvBoxParent">
+  <div :class="$style.cvBoxParent"></div>
 </template>
 <style module>
 .cvBoxParent {
@@ -339,7 +337,7 @@ const cvBoxParentLayoutClass = computed<CssModuleKey>(() => {
 })
 </script>
 <template>
-  <div :class="[$style.cvBoxParent, cvBoxParentLayoutClass]">
+  <div :class="[$style.cvBoxParent, cvBoxParentLayoutClass]"></div>
 </template>
 <style module>
 .cvBoxParent { display: flex; }
@@ -349,32 +347,3 @@ const cvBoxParentLayoutClass = computed<CssModuleKey>(() => {
 ```
 
 **原因：** 所有值都是静态的——只有“选哪一个”是动态的。CSS class 能干净表达这种选择。`useCssModule()` 为 class 名字符串提供编译期类型安全。
-
-## 危险信号
-
-- `propsCssStyle` 或 `propsStyle` 出现在 Props 接口中
-- `xxxStyle?: CSSProperties` 出现在 Props 接口中——禁止通过 prop 传递 CSS
-- 模板中存在 `:style="..."`
-- 非根元素上出现 `style="..."` 静态内联属性
-- `v-bind(obj.field)` 没有加引号
-- 简单 `calc(v-bind(x) * 1px)` 重复 3+ 次——应提取为 JS 字符串 computed
-- 非简单 `calc(v-bind(x) * N * 1px)` 重复 2+ 次——应提取为 JS 字符串 computed
-- JS 字符串 computed（`x + 'px'`）只用一次——应改用 CSS `calc(v-bind(x) * 1px)`
-- computed 返回静态 CSS 值或 `undefined` 做条件样式——应改用 CSS class + `{ [$style.xxx]: condition }`
-- 用 computed CSSProperties 做布局状态切换——应改用 `useCssModule()` + CSS class 名
-
-注意：把 `computed<CSSProperties>` 当作类型标注是正确的 TypeScript 实践——它不是危险信号。只有 `CSSProperties` 作为 **prop 类型** 时才被禁止。
-
-## 常见错误
-
-| 错误 | 修正 |
-|---------|-----|
-| 对静态值使用 v-bind | 在 `<style module>` 中写死静态值 |
-| class prop 按 CSS 属性命名 | 按绑定元素命名 |
-| `v-bind(obj.field)` 没有引号 | 使用字符串形式：`v-bind('obj.field')` |
-| 单用途 JS `x + 'px'` computed | 改用 CSS `calc(v-bind(x) * 1px)` |
-| 简单 `calc(v-bind(x) * 1px)` 重复 3+ 次 | 提取为 JS 字符串 computed |
-| 非简单 `calc(v-bind(x) * N * 1px)` 重复 2+ | 提取为 JS 字符串 computed |
-| 把 `Math.floor` / `Math.ceil` 丢给 CSS calc | 保留在 JS computed 中 |
-| 静态条件样式用 computed（`x ? '1px dashed' : undefined`） | CSS class + `{ [$style.xxx]: condition }` |
-| 布局状态切换用 computed CSSProperties | `useCssModule()` + 每个状态一个 CSS class 名 |

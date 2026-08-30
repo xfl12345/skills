@@ -19,7 +19,7 @@ Java 细则入口。按场景触发对应主题细则：
 
 | 场景 | skill | 何时触发 |
 |---|---|---|
-| 判空 / 取默认值 / 安全取属性 / Map 查询 | [`java-null`](./java-null.md) | 任何 Java null 处理——Objects/Optional，禁裸三元 |
-| 字符串判空 | [`java-string-utils`](./java-string-utils.md) | **仅当项目已装 commons-lang3**——StringUtils 替换裸双目 |
-| 多分支 switch | [`java-switch-yield`](./java-switch-yield.md) | Java 3+ 常量分支——增强 switch / yield（通用的「3+ 用 switch」见 [`SKILL.md`](../SKILL.md)） |
-| 集合加工 / 数据流水线 | [`java-stream`](./java-stream.md) | 集合遍历加工、filter/map/collect、并行流、Stream 相关 API——Stream 该用 / 禁用 / 高频误用与性能红线 |
+| 判空 / 取默认值 / 安全取属性 / Map 查询 | [java-null.md](./java-null.md) | 任何 Java null 处理——Objects/Optional，禁裸三元 |
+| 字符串判空 | [java-string-utils.md](./java-string-utils.md) | **仅当项目已装 commons-lang3**——StringUtils 替换裸双目 |
+| 多分支 switch | [java-switch-yield.md](./java-switch-yield.md) | Java 3+ 常量分支——增强 switch / yield（通用的「3+ 用 switch」见 [SKILL.md](../SKILL.md)） |
+| 集合加工 / 数据流水线 | [java-stream.md](./java-stream.md) | 集合遍历加工、filter/map/collect、并行流、Stream 相关 API——Stream 该用 / 禁用 / 高频误用与性能红线 |

@@ -72,7 +72,7 @@ metadata:
 
 | 语言 | 入口  | 何时读 | 常见文件后缀 |
 |---|---|---|---|
-| Java | [`references/java.md`](./references/java.md) | 写 / 改 / 审任何 Java 源码 | `.java` |
-| JavaScript | [`references/javascript.md`](./references/javascript.md) | 写 / 改 / 审任何 JavaScript/TypeScript 源码 | `.js` / `.jsx` |
-| TypeScript | [`references/typescript.md`](./references/typescript.md) | 写 / 改 / 审任何 TypeScript 源码 | `.ts` / `.tsx` |
-| Vue | [`references/vue.md`](./references/vue.md) | 写 / 改 / 审任何 Vue 组件源码 | `.vue` |
+| Java | [references/java.md](./references/java.md) | 写 / 改 / 审任何 Java 源码 | `.java` |
+| JavaScript | [references/javascript.md](./references/javascript.md) | 写 / 改 / 审任何 JavaScript/TypeScript 源码 | `.js` / `.jsx` |
+| TypeScript | [references/typescript.md](./references/typescript.md) | 写 / 改 / 审任何 TypeScript 源码 | `.ts` / `.tsx` |
+| Vue | [references/vue.md](./references/vue.md) | 写 / 改 / 审任何 Vue 组件源码 | `.vue` |

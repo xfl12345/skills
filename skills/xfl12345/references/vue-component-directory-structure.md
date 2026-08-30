@@ -62,6 +62,8 @@ export interface SharedState {        // 不是转发，是新定义
 
 ```typescript
 // types.ts
+import type { VNode } from 'vue'
+
 // ❌ BAD：加前缀，冗余
 export interface CircleProgressBarProps { ... }
 export interface CircleProgressBarEmits { ... }
@@ -85,10 +87,10 @@ export type ModelValue = string
 // 具名 model 示例：v-model:count 对应类型 Count
 export type Count = number
 
-// 各 slot 的 scoped props 类型
+// 各 slot 的 scoped props 类型——返回渲染内容 VNode[]，勿用 any（slot 调用返回 children 数组，纯文本也会被规范化为 VNode）
 export interface Slots {
-  default(props: { label: string }): any
-  item(props: { id: number; label: string }): any
+  default(props: { label: string }): VNode[]
+  item(props: { id: number; label: string }): VNode[]
 }
 ```
 
