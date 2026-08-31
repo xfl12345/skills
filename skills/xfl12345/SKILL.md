@@ -1,7 +1,7 @@
 ---
 name: xfl12345
 description: >
-  xfl12345 的个人编码推荐规范。当且仅当系统提示或者用户指定使用本规范，
+  xfl12345 个人推荐的编码规范。当且仅当系统提示或者用户指定使用本规范，
   在写、改、审任何 Java / TypeScript / JavaScript / Vue 源码时触发。
 when_to_use: >
   当且仅当系统提示或者用户指定使用本规范，在写、修改、审查 Java / TypeScript / JavaScript / Vue 源码时使用本 skill
