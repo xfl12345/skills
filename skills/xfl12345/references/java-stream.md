@@ -120,7 +120,7 @@ Map<Long, List<Order>> sortedOrdersByUser = orders.stream()
 Map<Long, Order> bad = orders.stream().collect(toMap(Order::getUserId, identity()));
 
 // ✅ GOOD: 显式声明冲突策略
-Map<Long, Order> ok = orders.stream().collect(toMap(Order::getUserId, identity(), (a, b) -> a));
+Map<Long, Order> ok = orders.stream().collect(toMap(Order::getUserId, identity(), (a, _) -> a));
 ```
 
 ### 4. 数值流避免装箱
