@@ -22,7 +22,7 @@ Stream 是声明式流水线：**描述“做什么”，不写“怎么做”**
 
 满足以下任一形态时优先 Stream：
 
-- **过滤 → 变换 → 收集** 的纯数据加工（最典型场景）；
+- **过滤 → 变换 → 收集 / 消费** 的数据加工（最典型场景；终点要单一容器用收集器，要逐元素动作或多集合分拣用 `forEach` 收尾，见第 5 节）；
 - 多级加工需要**中间结果复用**（`toList()` 落地一次，后续继续流）；
 - 查找类语义（`findFirst` / `anyMatch` / `noneMatch`），比手写循环 + break 意图清晰
 
@@ -40,18 +40,19 @@ Set<Long> userIds = paidOrders.stream().map(Order::getUserId).collect(toSet());
 
 ## 什么时候禁用
 
-- **有副作用诉求的遍历**（写库、发请求、改外部状态）→ 普通 for 循环。Stream 的正确性建立在无干扰、无副作用上；`forEach` 里塞业务动作是把流水线当循环体用，既骗自己又骗读者
+- **中间操作改写本地共享状态、干扰流源头** → 禁止，无干扰是 Stream 正确性的地基。远程调用不在此列：为拿返回值继续加工的留 `map`（见第 6 节），为产生效果、不回收结果的走末端 `forEach`（见第 5 节）
 - **需要 `break` / 早退的遍历** → 用查找类短路操作（`anyMatch` 等）；都不匹配就老老实实 for
 - **异常抛出密集的逻辑**（受检异常处理）→ for 更直白；Stream 里 try/catch 会把主逻辑淹没在样板里
-- **单层简单遍历**（只是打印或逐个调用 setter）：for 一行的事，套 Stream 纯属仪式感
+- **单层简单遍历**（只是打印或逐个调用 setter）→ 只读场景 `Iterable.forEach` 直接消费（`users.forEach(System.out::println)`），套 `.stream()` 纯属仪式感；普通 for 只留给「遍历中修改集合」这类 forEach 接不住的活
 
 ## 高频正反例
 
-> 示例中裸写的 `groupingBy` / `toMap` / `toSet` / `identity` / `collectingAndThen` 等均为 `java.util.stream.Collectors` 的静态工厂方法，`comparing` 即 `Comparator.comparing`——为保流水线干净可读，业务代码对它们做静态导入：
+> 示例中裸写的 `groupingBy` / `toMap` / `toSet` / `toCollection` / `identity` / `collectingAndThen` 等均为 `java.util.stream.Collectors` 的静态工厂方法，`comparing` 即 `Comparator.comparing`、`mapConcurrent` 即 `Gatherers.mapConcurrent`（Gatherer 体系 Java 24 转正）——为保流水线干净可读，业务代码对它们做静态导入：
 
 ```java
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.*;
+import static java.util.stream.Gatherers.mapConcurrent;
 ```
 
 > `.toList()` 有两个身份，按形态自辨：跟在链尾的无参 `.toList()` 是 Stream 的实例方法（Java 16+）；出现在 `collect(...)` 参数位的收集器工厂则来自上面的通配静态导入（见第 2 节 BAD 1）。
@@ -134,6 +135,73 @@ int bad = list.stream().reduce(0, Integer::sum);
 // ✅ GOOD: mapToInt 特化流
 int total = list.stream().mapToInt(Order::getAmount).sum();
 ```
+
+### 5. forEach 的地盘：无产物收尾，多集合分拣
+
+forEach 的本职是**复用循环**：流水线滤完转完，末端就地消费，不再落地中转。用不用它，看末端产物：
+
+- **没有产物**（逐元素写库、发送、通知）→ `forEach` 收尾，复用流水线现成的循环
+- **单一集合** → 收集器交差（`toList` / `toMap` / `toSet` / `collect` 都行），轮不到 forEach 回填空壳
+- **多个集合**（分拣：出口类型各异、各有名字）→ `forEach` 配 `switch` 逐元素归位——闭包引用各出口正是「真的需要修改外部集合」的正当场景；同构分桶找 `groupingBy`（见第 2 节）
+
+```java
+// ❌ BAD: 收完即遍历——中转 List 没人读第二遍，落地纯属浪费。而且还徒增一次遍历。
+var paidOrders = orders.stream().filter(Order::isPaid).toList();
+for (var order : paidOrders) {
+    orderRepository.save(order);
+}
+
+// ✅ GOOD: 不落地，流水线走完直接 forEach 消费。复用循环，一次遍历。
+orders.stream().filter(Order::isPaid).forEach(orderRepository::save);
+
+// ❌ BAD: 产物明明只有一个 List，却 new 空壳靠 forEach 回填——破坏闭包纯净，丢掉产物只读性
+List<String> readonlyActiveNames = new ArrayList<>();
+users.stream()
+    .filter(User::isActive)
+    .forEach(u -> readonlyActiveNames.add(u.getName()));
+
+// ✅ GOOD: 只读场景——产物由流水线生，落地即只读
+List<String> activeNames = users.stream()
+    .filter(User::isActive)
+    .map(User::getName)
+    .toList();
+
+// ✅ GOOD: 可写场景——收集器也能指定可写容器，轮不到 forEach 回填
+List<String> writableActiveNames = users.stream()
+    .filter(User::isActive)
+    .map(User::getName)
+    .collect(toCollection(ArrayList::new));
+
+// ✅ GOOD: 多集合分拣——switch 按类型归位，各出口就地落地；收集器只产单一容器，装不下类型各异的多出口
+events.stream().filter(Event::isValid).forEach(event -> {
+    switch (event) {
+        case ClickEvent e -> clickEvents.add(e);
+        case ViewEvent e -> viewEvents.add(e);
+        case ErrorEvent e -> errorEvents.add(e);
+    }
+});
+```
+
+### 6. 远程调用：拿值留 map，扇出用 mapConcurrent
+
+为拿返回值而调远程接口是 `map` 的合法职责（效果型调用走第 5 节 `forEach`），但串行等待是白挨的延迟——虚拟线程让并发无论多少都有收益。要并发也别退回前 Gatherer 时代的手搓扇出：
+
+```java
+// ❌ BAD: 传统 CompletableFuture 扇出——执行器开关自理、List 倒腾多趟、全量发射不设限，意图被样板淹没
+List<UserProfile> badProfiles;
+try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+    List<CompletableFuture<UserProfile>> futures = userIds.stream()
+        .map(id -> CompletableFuture.supplyAsync(() -> profileClient.get(id), executor))
+        .toList();
+    CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+    badProfiles = futures.stream().map(CompletableFuture::join).toList();
+}
+
+// ✅ GOOD: mapConcurrent 为阻塞 I/O 扇出而生——虚拟线程承载、限并发、结果保序
+List<UserProfile> profiles = userIds.stream().gather(mapConcurrent(8, profileClient::get)).toList();
+```
+
+> 想攒批再调（如 100 个 ID 一次 RPC）看 `Gatherers.windowFixed`：先把流切成定长窗口，再逐窗发请求——Gatherer 体系正是自定义中间操作的官方扩展点
 
 ## 性能红线
 
