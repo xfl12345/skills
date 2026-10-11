@@ -41,7 +41,7 @@ description: 打包器项目（Vite / webpack 等——模块说明符由打包�
   - 走法分工按资源领域划：常量 / 通用模型 / class 一律按前述规则直达文件；Vue 组件则一律经目录 index / barrel 汇总消费，细则见 [vue-component-directory-structure.md](./vue-component-directory-structure.md)
   - 消费者必须从顶层 barrel 导入、禁止绕行直取 `.vue`
   - re-export 类型必须显式 type 标注（如 `export type * as XxxTypes from './types'`；`isolatedModules` / `verbatimModuleSyntax` 下与值导出混写直接编译报错）
-- 同一文件的值导入 + 类型导入写成一条语句，用内联 `type` 修饰符；仅当 value / type 混杂且超出可读阈值时（经验值：type 条目 >2、或总条目 >6）才拆成「值导入」+「类型导入」两条：
+- 同一文件的值导入 + 类型导入写成一条语句，用内联 `type` 修饰符；仅当 value / type 混杂且超出可读阈值时（经验值：type 条目 >2）才拆成「值导入」+「类型导入」两条：
 
   ```typescript
   // ❌ BAD: 能合成一条却拆成两条
@@ -60,7 +60,7 @@ description: 打包器项目（Vite / webpack 等——模块说明符由打包�
     type ChannelEvent,
     type ChannelStatus,
     TheConst,
-  } from './features/realtime/broadcast/channel'
+  } from './model/broadcast/channel'
 
   // ✅ GOOD: 拆成「值导入」+「类型导入」两条，各归各
   import {
@@ -68,36 +68,41 @@ description: 打包器项目（Vite / webpack 等——模块说明符由打包�
     disconnect,
     ChannelContext,
     TheConst,
-  } from './features/realtime/broadcast/channel'
+  } from './model/broadcast/channel'
   import type {
     ChannelConfig,
     ChannelEvent,
     ChannelStatus,
-  } from './features/realtime/broadcast/channel'
+  } from './model/broadcast/channel'
   ```
 
-- 文件引用 ≤2 级用相对（`./types`、`../common`）
+- 文件引用 <2 级用相对（`./types`、`../common`）
   - 级数 = 路径里 `../` 的层数（`./` 不计层级，只是「当前目录内」）：
-  - 级数大于 2 应转用绝对（如 `@/api/common/TheConst`）
+  - 级数 ≥2 应转用绝对
 
   ```typescript
-  // src/components/views/chat/Chat.vue
+  // src/components/chat/Chat.vue
 
-  // ✅ GOOD: 0 级（同目录 ./）——相对
+  // ✅ GOOD: 0 级（同目录 ./）
   import { foo } from './ChatInput'
   import type { Msg } from './types'
 
-  // ✅ GOOD: 1 级（一个 ../）——相对
-  import { bar } from '../shared/format'      // ../shared = 1 级
-  import { baz } from '../../model/User'      // ../../model = 2 级 → 仍在阈值内
+  // ✅ GOOD: 1 级（一个 ../）
+  // 无论 shared 是 shared.ts 还是 shared/index.ts
+  // 只要能写成单个 '../' 且不再有更多的 '/' 就可以
+  import { bar } from '../shared'
 
-  // ❌ BAD: 超过 2 级还用相对，层级深、易写错、移动文件就断
-  import { qux } from '../../../api/common/TheConst'   // 3 级 → 超阈值
+  // ❌ BAD: 凑不出「单个 '../' + 名称」的形态，路径引用绕，不利于判断引用来源，可读性差
+  import { User } from '../../model'                        // 2 个 ../ → 超阈值
+  import { fmt } from '../shared/format'                    // 名称后还挂 '/' → 不合形态
+  import { API_BASE_PATH } from '../../api/common/TheConst' // 2 个 ../ → 超阈值，名称后还挂 '/' → 不合形态
 
-  // ✅ GOOD: >2 级用绝对别名（@ 指向 src）
-  import { qux } from '@/api/common/TheConst'
+  // ✅ GOOD: 转绝对别名（@ 指向 src）
+  import { User } from '@/model'
+  import { fmt } from '@/components/shared/format'
+  import { API_BASE_PATH } from '@/api/common/TheConst'
   ```
 
 - 组件引用（相对路径的参照：src 根一级文件，如 `src/router/index.ts`、`src/App.vue`）
-  - 跨树导入 vue 组件一律走顶层 barrel `@/components`
-  - 邻里（文件引用 ≤2 级）引用准确到目录：`import { NewChatButton } from '../NewChatButton'`，即其 index 入口
+  - 跨树导入 vue 组件一律走组件顶层 barrel `@/components/ChatButton`
+  - 邻里（文件引用 <2 级）引用准确到目录：`import { ChatButton } from '../ChatButton'`，即其 index 入口
