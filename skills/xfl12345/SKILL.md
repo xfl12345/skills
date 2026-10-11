@@ -28,31 +28,34 @@ metadata:
 
 - **switch vs if**：支持 switch 的语言，3 条及以上常量匹配一律 switch-case；2 条 / 范围判断 / 复合条件用 if
 - **花括号**：Java/JS/TS/C# 等 if 控制块用花括号的语言，必须花括号包裹，禁止写成一行
-- **链式调用拆行**：一行最多 3 次函数调用（含无参的起始调用如 `Config.builder()`，以及终止调用如 `.build()`）。≤3 次可一行；一旦超过 3 次，整条链全部拆成每行一次调用
+- **链式调用拆行**：一行最多 3 步（每个函数调用算一步）；超过 3 步，或行宽超过 formatter 约定（如 `.editorconfig`），整条链都拆成每步独占一行
   ```typescript
-  // ✅ GOOD: 刚好 3 次调用（filter / map / slice），一行
+  // ✅ GOOD: 三步之内，单行不过宽，可以一行搞定
   const activeNames = list.filter(x => x.active).map(x => x.name).slice(0, 10)
 
-  // ❌ BAD: 4 次调用挤一行，动作太多难读
-  const badSortedNames = list.filter(x => x.active).map(x => x.name).slice(0, 10).sort()
+  // ❌ BAD: 单行过宽
+  const tooLongChainInOneLine = list.filter(x => x.active).map(x => x.veryVeryLongField ?? '').slice(0, 10)
 
-  // ✅ GOOD: 超过 3 次，整条链拆成每行一次调用（第一行 = 起点接收者 + 第一个调用）
+  // ✅ GOOD: 没超 3 步，但单行过宽，照样拆行排列
+  const theLongChain = list.filter(x => x.active)
+    .map(x => x.veryVeryLongField ?? '')
+    .slice(0, 10)
+
+  // ❌ BAD: 超过 3 步
+  const badSortedActiveNames = list.filter(x => x.active).map(x => x.name).slice(0, 10).sort()
+  const badSortedBookNames = getBookList().map(x => x.name).slice(0, 10).sort()
+
+  // ✅ GOOD: 超过 3 步，整条链拆成每步独占一行（第一行 = 起点接收者 + 第一个调用）
   const sortedActiveNames = list.filter(x => x.active)
     .map(x => x.name)
     .slice(0, 10)
     .sort()
 
-  // ✅ GOOD: builder 模式——Config.builder() / .setName() / .build() 刚好 3 次，一行
-  const config = Config.builder().setName('admin').build()
-
-  // ❌ BAD: 4 次调用挤一行（Config.builder() / .setName() / .setLevel() / .build()）
-  const badConfig = Config.builder().setName('admin').setLevel(1).build()
-
-  // ✅ GOOD: 超过 3 次，整条链拆开（Config.builder() 起点调用独占一行）
-  const config2 = Config.builder()
-    .setName('admin')
-    .setLevel(1)
-    .build()
+  // ✅ GOOD: 起点是函数也算作链式调用的一步，累计超 3 步就必须拆行处理
+  const sortedBookNames = getBookList()
+    .map(x => x.name)
+    .slice(0, 10)
+    .sort()
   ```
 
 ### 包容性命名
