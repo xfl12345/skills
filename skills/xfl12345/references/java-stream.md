@@ -92,19 +92,24 @@ Map<Long, List<Order>> grouped = orders.stream().collect(groupingBy(Order::getUs
 
 // ❌ BAD 1: collectingAndThen 把分组与排序挤进一个 collect，lambda 套 lambda，读者得逐层拆
 Map<Long, List<Order>> badNested = orders.stream()
-    .collect(groupingBy(Order::getUserId,
+    .collect(groupingBy(
+        Order::getUserId,
         collectingAndThen(
             toList(),
-            bucket -> bucket.stream().sorted(byCreatedAtDesc).toList())));
+            bucket -> bucket.stream().sorted(byCreatedAtDesc).toList()
+        )
+    ));
 
 // ❌ BAD 2: 只为改桶内顺序，entrySet 重开一条流二次 collect(toMap)，多出一整趟搬运
-Map<Long, List<Order>> badReflow = grouped.entrySet().stream()
-    .collect(toMap(Map.Entry::getKey, e -> {
-        return e.getValue()
+Map<Long, List<Order>> badReflow = grouped.entrySet()
+    .stream()
+    .collect(toMap(
+        Map.Entry::getKey,
+        e -> e.getValue()
             .stream()
             .sorted(byCreatedAtDesc)
             .toList();
-    }));
+    ));
 
 // ❌ BAD 3: 只是想桶内有序，却把单一 Map 产物交给 forEach 回填，破坏闭包纯净、损失并行安全性和产物只读性
 Map<Long, List<Order>> badBackfill = new HashMap<>();
